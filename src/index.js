@@ -1,77 +1,75 @@
 import './css/styles.css';
-import API from './fetchCountries';
-import debounce from 'lodash.debounce';
+import debounce from 'lodash/debounce';
 import Notiflix from 'notiflix';
+import API from './fetchCountries';
 
 const DEBOUNCE_DELAY = 300;
 
-const refs = {
-  inputEl: document.querySelector('input#search-box'),
-  countryListEl: document.querySelector('.country-list'),
-  countryInfoEl: document.querySelector('.country-info'),
+const searchInput = document.querySelector('#search-box');
+const countryList = document.querySelector('.country-list');
+const countryInfo = document.querySelector('.country-info');
+
+const renderDropdown = (wrapper, object) => {
+    object.forEach(element => {
+        wrapper.insertAdjacentHTML('beforeend', `<li><img src="${element.flags.svg}" width="20"> ${element.name.official}</li>`);
+    });
 };
 
-refs.inputEl.addEventListener('input', debounce(onInputEnter, DEBOUNCE_DELAY));
+const renderInfoBox = (wrapper, object) => {
+    if(object.length === 1) {
+        clearInnerHtml(countryList);
+        const langList = Object.values(object[0].languages);
+        wrapper.insertAdjacentHTML('beforeend', `<h2><img src="${object[0].flags.svg}" width="40"> ${object[0].name.official}</h2>
+        <dl>
+            <dt>Capital</dt>
+            <dd>${object[0].capital}</dd>
+            <dt>Population</dt>
+            <dd>${object[0].population}</dd>
+            <dt>Languages</dt>
+            <dd>${langList.join(', ')}</dd>
+        </dl>`);
+    }
+};
 
-function onInputEnter() {
-  if (refs.inputEl.value === '') {
-    clearMarkup();
-    return;
-  }
-  clearMarkup();
-  API.fetchCountry(refs.inputEl.value.trim()).then(checkQuantity).catch(showError);
-}
+const clearInnerHtml = wrapper => {
+    wrapper.innerHTML = '';
+};
 
-function showError(error) {
-  Notiflix.Notify.failure('Oops, there is no country with that name');
-}
+const searchInputHandler = e => {
+    const enteredText = e.target.value;
+    const sanitiedText = enteredText.trim();
+    
+    // clear previous result
+    clearInnerHtml(countryList);
+    clearInnerHtml(countryInfo);
 
-function checkQuantity(data) {
-  if (data.length === 1) {
-    return renderCountryCard(data);
-  } else if (data.length >= 2 && data.length <= 10) {
-    return renderCountryList(data);
-  } else {
-    return Notiflix.Notify.info('Too many matches found. Please enter a more specific name');
-  }
-}
+    // Если пользователь полностью очищает поле поиска, то HTTP-запрос не выполняется,
+    // а разметка списка стран или информации о стране пропадает.
+    if(enteredText.length === 0) {
+        return;
+    }
 
-function renderCountryList(countries) {
-  const listMarkup = countries
-    .map(({ flags, name }) => {
-      return `<li class="country-list__item">
-  <img src="${flags.svg}" alt="${name.official}" class="country-list__img" width="40" height="30" />
-  <p class="country-list__meta">${name.official}</p>
-</li>`;
-    })
-    .join('');
+    const resultObject = API.fetchCountries(sanitiedText)
+        .then(result=>{
+            if(result.length > 10) {
+                Notiflix.Notify.info('Too many matches found. Please enter a more specific name.');
+                return;
+            } 
+            
+            if(result.status === 404){
+                Notiflix.Notify.failure('Oops, there is no country with that name');
+                return;
+            }
 
-  refs.countryListEl.insertAdjacentHTML('beforeend', listMarkup);
-}
+            renderDropdown(countryList, result);
+            renderInfoBox(countryInfo, result);
 
-function renderCountryCard(countries) {
-  const cardMarkup = countries
-    .map(({ name, capital, population, flags, languages }) => {
-      return `<div>
-      <img src="${flags.svg}" alt="${
-        name.official
-      }" class="country-card__img" width="200" heigh="100"/>
-    </div>
-    <div class="card-body">
-      <h2 class="card-title">${name.official}</h2>
-      <p class="card-text"><b>Capital:</b> ${capital}</p>
-      <p class="card-text"><b>Population:</b> ${population}</p>
-      <p class="card-text"><b>Languages:</b> ${Object.values(languages).join(', ')} </p>
-    </div>`;
-    })
-    .join('');
-  refs.countryInfoEl.insertAdjacentHTML('afterbegin', cardMarkup);
-}
+        })
+        .catch(error=>{
+            console.log(error);
+        });
 
-function clearMarkup() {
-  refs.countryInfoEl.innerHTML = '';
-  refs.countryListEl.innerHTML = '';
-}
+};
 
-
+searchInput.addEventListener('input', debounce(searchInputHandler, DEBOUNCE_DELAY));
 
