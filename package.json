@@ -6,7 +6,7 @@
   "homepage": "https://olegk-coder.github.io/goit-js-hw-10",
   "scripts": {
     "dev": "parcel src/*.html",
-    "build": "parcel build src/*.html --public-url /go-js-hw-10/"
+    "build": "parcel build src/*.html --public-url /goit-js-hw-10/"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
     "sass": "^1.32.8"
   },
   "dependencies": {
+    "axios": "^0.24.0",
     "debounce": "^1.2.1",
     "notiflix": "^3.2.2"
   }
